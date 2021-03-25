@@ -76,7 +76,7 @@ int main(int argc, const char * argv[]) {
     long maxSampleCount = SAMPLE_RATE * DURATION;
     
     long sampleCount = 0;
-    UInt32 bytesToWrite = 2;
+    UInt32 bytesToWrite = BYTES_PER_SAMPLE;
     double waveLengthInSamples = SAMPLE_RATE / hz;
     NSLog(@"wave (or cycle) length in samples: %.4f\n", waveLengthInSamples);
     
@@ -89,8 +89,8 @@ int main(int argc, const char * argv[]) {
         } else {
           sample = CFSwapInt16HostToBig(SHRT_MIN);
         }
-        // note that we are using 2 bytes per sample, hence offset is +sampleCount * 2+
-        error = AudioFileWriteBytes(audioFile, false, sampleCount * bytesToWrite, &bytesToWrite, &sample);
+        SInt64 offset = sampleCount * bytesToWrite;
+        error = AudioFileWriteBytes(audioFile, false, offset, &bytesToWrite, &sample);
         assert(error == noErr);
         sampleCount++;
       }
