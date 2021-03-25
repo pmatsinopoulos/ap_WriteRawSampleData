@@ -29,6 +29,19 @@ void buildFileURL(double hz, NSURL** fileURL) {
   *fileURL = [NSURL fileURLWithPath:filePath];
 }
 
+void buildAudioStreamBasicDescription(AudioStreamBasicDescription* audioStreamBasicDescription) {
+  memset(audioStreamBasicDescription, 0, sizeof(AudioStreamBasicDescription));
+  
+  audioStreamBasicDescription->mSampleRate = SAMPLE_RATE;
+  audioStreamBasicDescription->mFormatID = kAudioFormatLinearPCM;
+  audioStreamBasicDescription->mFormatFlags = kAudioFormatFlagIsBigEndian | kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+  audioStreamBasicDescription->mBitsPerChannel = BITS_PER_SAMPLE;
+  audioStreamBasicDescription->mChannelsPerFrame = NUMBER_OF_CHANNELS;
+  audioStreamBasicDescription->mFramesPerPacket = FRAMES_PER_PACKET;
+  audioStreamBasicDescription->mBytesPerFrame = BYTES_PER_SAMPLE * NUMBER_OF_CHANNELS;
+  audioStreamBasicDescription->mBytesPerPacket = audioStreamBasicDescription->mFramesPerPacket * audioStreamBasicDescription->mBytesPerFrame;
+} // buildAudioStreamBasicDescription
+
 int main(int argc, const char * argv[]) {
   if (argc < 2) {
     printf("Usage: WriteRawAudioSamples n\n(where n is tone in Hz)\n");
@@ -46,17 +59,8 @@ int main(int argc, const char * argv[]) {
     
     // Prepare the format
     AudioStreamBasicDescription audioStreamBasicDescription;
-    memset(&audioStreamBasicDescription, 0, sizeof(audioStreamBasicDescription));
-    
-    audioStreamBasicDescription.mSampleRate = SAMPLE_RATE;
-    audioStreamBasicDescription.mFormatID = kAudioFormatLinearPCM;
-    audioStreamBasicDescription.mFormatFlags = kAudioFormatFlagIsBigEndian | kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-    audioStreamBasicDescription.mBitsPerChannel = BITS_PER_SAMPLE;
-    audioStreamBasicDescription.mChannelsPerFrame = NUMBER_OF_CHANNELS;
-    audioStreamBasicDescription.mFramesPerPacket = FRAMES_PER_PACKET;
-    audioStreamBasicDescription.mBytesPerFrame = BYTES_PER_SAMPLE * NUMBER_OF_CHANNELS;
-    audioStreamBasicDescription.mBytesPerPacket = audioStreamBasicDescription.mFramesPerPacket * audioStreamBasicDescription.mBytesPerFrame;
-    
+    buildAudioStreamBasicDescription(&audioStreamBasicDescription);
+        
     // Set up the file
     AudioFileID audioFile;
     OSStatus error = noErr;
