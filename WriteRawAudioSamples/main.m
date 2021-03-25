@@ -18,7 +18,7 @@
 
 // number of seconds we want to capture
 #define DURATION 5.0
-#define FILENAME_FORMAT @"%0.3f-square.aif"
+#define FILENAME_FORMAT @"%0.3f-sine.aif"
 
 #define NUMBER_OF_CHANNELS 1
 
@@ -41,6 +41,10 @@ void buildAudioStreamBasicDescription(AudioStreamBasicDescription* audioStreamBa
   audioStreamBasicDescription->mBytesPerFrame = BYTES_PER_SAMPLE * NUMBER_OF_CHANNELS;
   audioStreamBasicDescription->mBytesPerPacket = audioStreamBasicDescription->mFramesPerPacket * audioStreamBasicDescription->mBytesPerFrame;
 } // buildAudioStreamBasicDescription
+
+SInt16 generateSineShapeSample(int i, double waveLengthInSamples) {
+  return (SInt16) SHRT_MAX * sin(2 * M_PI * (i / waveLengthInSamples));
+}
 
 int main(int argc, const char * argv[]) {
   if (argc < 2) {
@@ -83,12 +87,8 @@ int main(int argc, const char * argv[]) {
     while (sampleCount < maxSampleCount) {
       for(int i = 0; i < waveLengthInSamples; i++) {
         // Square wave
-        SInt16 sample;
-        if (i < waveLengthInSamples/2) {
-          sample = CFSwapInt16HostToBig(SHRT_MAX);
-        } else {
-          sample = CFSwapInt16HostToBig(SHRT_MIN);
-        }
+        SInt16 sample = CFSwapInt16HostToBig(generateSineShapeSample(i, waveLengthInSamples));
+        
         SInt64 offset = sampleCount * bytesToWrite;
         error = AudioFileWriteBytes(audioFile, false, offset, &bytesToWrite, &sample);
         assert(error == noErr);
