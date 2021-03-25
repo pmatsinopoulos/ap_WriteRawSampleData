@@ -18,7 +18,7 @@
 
 // number of seconds we want to capture
 #define DURATION 5.0
-#define FILENAME_FORMAT @"%0.3f-square.aif"
+#define FILENAME_FORMAT @"%0.3f-saw.aif"
 
 #define NUMBER_OF_CHANNELS 1
 
@@ -41,6 +41,10 @@ void buildAudioStreamBasicDescription(AudioStreamBasicDescription* audioStreamBa
   audioStreamBasicDescription->mBytesPerFrame = BYTES_PER_SAMPLE * NUMBER_OF_CHANNELS;
   audioStreamBasicDescription->mBytesPerPacket = audioStreamBasicDescription->mFramesPerPacket * audioStreamBasicDescription->mBytesPerFrame;
 } // buildAudioStreamBasicDescription
+
+int generateSawShapedSample(int i, int waveLengthInSamples) {
+  return ((i / waveLengthInSamples) * SHRT_MAX * 2) - SHRT_MAX;
+}
 
 int main(int argc, const char * argv[]) {
   if (argc < 2) {
@@ -84,11 +88,9 @@ int main(int argc, const char * argv[]) {
       for(int i = 0; i < waveLengthInSamples; i++) {
         // Square wave
         SInt16 sample;
-        if (i < waveLengthInSamples/2) {
-          sample = CFSwapInt16HostToBig(SHRT_MAX);
-        } else {
-          sample = CFSwapInt16HostToBig(SHRT_MIN);
-        }
+        
+        sample = CFSwapInt16HostToBig(generateSawShapedSample(i, waveLengthInSamples));
+        
         SInt64 offset = sampleCount * bytesToWrite;
         error = AudioFileWriteBytes(audioFile, false, offset, &bytesToWrite, &sample);
         assert(error == noErr);
