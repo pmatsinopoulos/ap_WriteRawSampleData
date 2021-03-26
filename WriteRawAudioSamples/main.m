@@ -18,12 +18,12 @@
 
 // number of seconds we want to capture
 #define DURATION 5.0
-#define FILENAME_FORMAT @"%0.3f-square.aif"
+#define FILENAME_FORMAT @"%0.3f-%@.aif"
 
 #define NUMBER_OF_CHANNELS 1
 
-void buildFileURL(double hz, NSURL** fileURL) {
-  NSString* fileName = [NSString stringWithFormat:FILENAME_FORMAT, hz];
+void buildFileURL(double hz, NSString *shape, NSURL** fileURL) {
+  NSString* fileName = [NSString stringWithFormat:FILENAME_FORMAT, hz, shape];
   NSString* filePath = [[[NSFileManager defaultManager] currentDirectoryPath]
                         stringByAppendingPathComponent:fileName];
   *fileURL = [NSURL fileURLWithPath:filePath];
@@ -42,9 +42,36 @@ void buildAudioStreamBasicDescription(AudioStreamBasicDescription* audioStreamBa
   audioStreamBasicDescription->mBytesPerPacket = audioStreamBasicDescription->mFramesPerPacket * audioStreamBasicDescription->mBytesPerFrame;
 } // buildAudioStreamBasicDescription
 
+SInt16 generateSineShapeSample(int i, double waveLengthInSamples) {
+  return (SInt16)(SHRT_MAX * sin(2 * M_PI * (i / waveLengthInSamples)));
+}
+
+SInt16 generateSquareShapeSample(int i, double waveLengthInSamples) {
+  if (i < waveLengthInSamples / 2) {
+    return SHRT_MAX;
+  } else {
+    return SHRT_MIN;
+  }
+}
+
+SInt16 generateSawShapeSample(int i, double waveLengthInSamples) {
+  return (SInt16)(((i / waveLengthInSamples) * SHRT_MAX * 2) - SHRT_MAX);
+}
+
+NSString* correctShape(NSString *shape) {
+  if ([shape isEqualToString:@"square"] ||
+      [shape isEqualToString:@"saw"] ||
+      [shape isEqualToString:@"sine"])
+  {
+    return shape;
+  } else {
+    return @"square";
+  }
+}
+
 int main(int argc, const char * argv[]) {
   if (argc < 2) {
-    printf("Usage: WriteRawAudioSamples n\n(where n is tone in Hz)\n");
+    printf("Usage: WriteRawAudioSamples n <shape>\nwhere n is tone in Hz, shape is one of 'square' (default), 'saw', 'sine'\n");
     return -1;
   }
 
@@ -52,10 +79,18 @@ int main(int argc, const char * argv[]) {
     double hz = atof(argv[1]);
     assert(hz > 0);
     
-    NSLog(@"generating %f hz tone...", hz);
+    NSString *shape;
+    if (argc == 2) {
+      shape = @"square";
+    } else {
+      shape = [NSString stringWithFormat:@"%s", argv[2]];
+      shape = correctShape(shape);
+    }
+    
+    NSLog(@"generating %f hz tone with shape %@...", hz, shape);
     
     NSURL *fileURL = NULL;
-    buildFileURL(hz, &fileURL);
+    buildFileURL(hz, shape, &fileURL);
     
     // Prepare the format
     AudioStreamBasicDescription audioStreamBasicDescription;
@@ -82,16 +117,22 @@ int main(int argc, const char * argv[]) {
     
     while (sampleCount < maxSampleCount) {
       for(int i = 0; i < waveLengthInSamples; i++) {
-        // Square wave
-        SInt16 sample;
-        if (i < waveLengthInSamples/2) {
-          sample = CFSwapInt16HostToBig(SHRT_MAX);
-        } else {
-          sample = CFSwapInt16HostToBig(SHRT_MIN);
+        SInt16 sample = 0;
+        
+        if ([shape isEqualToString:@"square"]) {
+          sample = generateSquareShapeSample(i, waveLengthInSamples);
         }
+        else if ([shape isEqualToString:@"sine"]) {
+          sample = generateSineShapeSample(i, waveLengthInSamples);
+        } else if ([shape isEqualToString:@"saw"]) {
+          sample = generateSawShapeSample(i, waveLengthInSamples);
+        }
+        sample = CFSwapInt16HostToBig(sample);
+        
         SInt64 offset = sampleCount * bytesToWrite;
         error = AudioFileWriteBytes(audioFile, false, offset, &bytesToWrite, &sample);
         assert(error == noErr);
+        
         sampleCount++;
       }
     }
