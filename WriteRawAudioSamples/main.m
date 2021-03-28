@@ -11,7 +11,8 @@
 // CD-qualiy sample rate
 #define SAMPLE_RATE 44100
 #define BITS_PER_SAMPLE 16
-#define BYTES_PER_SAMPLE 16 / 8
+#define BYTE_SIZE_IN_BITS 8
+#define BYTES_PER_SAMPLE BITS_PER_SAMPLE / BYTE_SIZE_IN_BITS
 // We use LPCM so the encoding does not use packets. Hence,
 // we are going to have 1 frame per packet.
 #define FRAMES_PER_PACKET 1
@@ -43,11 +44,15 @@ void buildAudioStreamBasicDescription(AudioStreamBasicDescription* audioStreamBa
 } // buildAudioStreamBasicDescription
 
 SInt16 generateSineShapeSample(int i, double waveLengthInSamples) {
-  return (SInt16)(SHRT_MAX * sin(2 * M_PI * (i / waveLengthInSamples)));
+  assert(i >= 1 && i <= waveLengthInSamples);
+  
+  return (SInt16)(SHRT_MAX * sin(2 * M_PI * (i - 1) / waveLengthInSamples));
 }
 
 SInt16 generateSquareShapeSample(int i, double waveLengthInSamples) {
-  if (i < waveLengthInSamples / 2) {
+  assert(i >= 1 && i <= waveLengthInSamples);
+  
+  if (i <= waveLengthInSamples / 2) {
     return SHRT_MAX;
   } else {
     return SHRT_MIN;
@@ -55,7 +60,9 @@ SInt16 generateSquareShapeSample(int i, double waveLengthInSamples) {
 }
 
 SInt16 generateSawShapeSample(int i, double waveLengthInSamples) {
-  return (SInt16)(((i / waveLengthInSamples) * SHRT_MAX * 2) - SHRT_MAX);
+  assert(i >= 1 && i <= waveLengthInSamples);
+  
+  return (SInt16)(2 * SHRT_MAX / waveLengthInSamples * (i - 1) - SHRT_MAX);
 }
 
 NSString* correctShape(NSString *shape) {
@@ -110,22 +117,22 @@ int main(int argc, const char * argv[]) {
     // Start writing samples;
     long maxSampleCount = SAMPLE_RATE * DURATION;
     
-    long sampleCount = 0;
+    long sampleCount = 1;
     UInt32 bytesToWrite = BYTES_PER_SAMPLE;
     double waveLengthInSamples = SAMPLE_RATE / hz;
     NSLog(@"wave (or cycle) length in samples: %.4f\n", waveLengthInSamples);
     
-    while (sampleCount < maxSampleCount) {
-      for(int i = 0; i < waveLengthInSamples; i++) {
+    while (sampleCount <= maxSampleCount) {
+      for(int i = 1; i <= waveLengthInSamples; i++) {
         SInt16 sample = 0;
         
         if ([shape isEqualToString:@"square"]) {
           sample = generateSquareShapeSample(i, waveLengthInSamples);
         }
-        else if ([shape isEqualToString:@"sine"]) {
-          sample = generateSineShapeSample(i, waveLengthInSamples);
-        } else if ([shape isEqualToString:@"saw"]) {
+        else if ([shape isEqualToString:@"saw"]) {
           sample = generateSawShapeSample(i, waveLengthInSamples);
+        } else if ([shape isEqualToString:@"sine"]) {
+          sample = generateSineShapeSample(i, waveLengthInSamples);
         }
         sample = CFSwapInt16HostToBig(sample);
         
